@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install Claude Desktop + MCP servers on Kali/Debian/Ubuntu
+# install-claude-desktop.sh — Install Claude Desktop + MCP servers on Kali/Debian/Ubuntu
+# Author: SkyzFallin (https://github.com/SkyzFallin)
+# Usage: sudo ./install-claude-desktop.sh
+#
 # Sources:
 #   https://github.com/aaddrick/claude-desktop-debian
 #   https://www.kali.org/tools/mcp-kali-server/
