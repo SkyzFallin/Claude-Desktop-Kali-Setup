@@ -2,10 +2,12 @@
   <img src="banner.svg" alt="Claude Desktop Kali Setup Banner" width="100%"/>
 </p>
 
-![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white)
-![Platform](https://img.shields.io/badge/Platform-Kali%20%7C%20Debian%20%7C%20Ubuntu-c586c0?style=flat-square&logo=linux&logoColor=white)
-![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
-![Author](https://img.shields.io/badge/Author-SkyzFallin-ce9178?style=flat-square&logo=github&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white" alt="Bash"/>
+  <img src="https://img.shields.io/badge/Platform-Kali%20%7C%20Debian%20%7C%20Ubuntu-c586c0?style=flat-square&logo=linux&logoColor=white" alt="Platform"/>
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"/>
+  <img src="https://img.shields.io/badge/Author-SkyzFallin-ce9178?style=flat-square&logo=github&logoColor=white" alt="Author"/>
+</p>
 
 # claude-desktop-kali-setup
 
