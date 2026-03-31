@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="banner.svg" alt="Claude Desktop Kali Setup Banner" width="100%"/>
+</p>
+
 # claude-desktop-kali-setup
 
 One-command installer for Claude Desktop + MCP servers on Kali/Debian/Ubuntu.
