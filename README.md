@@ -21,20 +21,33 @@ The install script:
 
 - Generates **our own** GPG signing keypair (no third-party key pulled from GitHub)
 - Builds the `claude-desktop` `.deb` **from source** ([aaddrick/claude-desktop-debian](https://github.com/aaddrick/claude-desktop-debian))
-- Signs the built package with our key and verifies the signature before installing
+- Signs the built package with **our key** and verifies the signature before installing
 - Installs `claude-desktop` and `mcp-kali-server`
 - Configures MCP servers (filesystem + Kali MCP) in `~/.config/Claude/claude_desktop_config.json`
 
-## Package Signing
+## Package Signing — Our Own PKI
 
-Rather than trusting a prebuilt package from an external APT repo, this setup is
-self-contained:
+All signing and verification uses a keypair **we generate and control**. No
+third-party PKI is involved at any point:
 
 - `scripts/generate-signing-key.sh` creates a fresh ed25519 signing keypair
   (stored in `/etc/claude-desktop/signing-gnupg`) and exports the public key to
   `claude-desktop-signing.pub.asc`.
 - The installer builds the `.deb` locally, signs it with that key, and refuses
   to install unless the signature verifies.
+- No third-party APT repository or GPG key is ever added to the system. The
+  aaddrick `KEY.gpg` that older setups pulled from GitHub is **not** used.
+
+### Where aaddrick fits in
+
+[aaddrick/claude-desktop-debian](https://github.com/aaddrick/claude-desktop-debian)
+supplies only the **build scripts** — the code that repackages Anthropic's
+official installer into a `.deb`. That is a source-code dependency, not a
+trust/PKI dependency:
+
+- None of aaddrick's GPG keys are imported or trusted.
+- Inside those build scripts, the download of Anthropic's installer is verified
+  by SHA-256 checksum, not by any third-party key.
 
 You can (re)generate the key on its own:
 
