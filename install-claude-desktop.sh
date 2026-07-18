@@ -102,12 +102,8 @@ cat > "$CONFIG_FILE" << EOF
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME"]
     },
     "kali-mcp-server": {
-      "command": "python3",
-      "args": [
-        "/usr/share/mcp-kali-server/mcp_server.py",
-        "--server",
-        "http://127.0.0.1:5000/"
-      ],
+      "command": "mcp-server",
+      "args": ["--server", "http://127.0.0.1:5000"],
       "description": "Kali MCP Server",
       "timeout": 300
     }
