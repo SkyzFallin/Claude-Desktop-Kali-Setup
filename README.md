@@ -47,8 +47,12 @@ CLAUDE_GNUPGHOME=~/.claude-desktop-signing ./scripts/generate-signing-key.sh
 ```bash
 git clone https://github.com/SkyzFallin/claude-desktop-kali-setup.git
 cd claude-desktop-kali-setup
-sudo ./install-claude-desktop.sh
+./install-claude-desktop.sh
 ```
+
+Run it as a normal user, **not** with `sudo` — the upstream Claude Desktop
+build script refuses to run as root. The installer calls `sudo` itself for the
+steps that need it, so you may be prompted for your password.
 
 ## After Installation
 

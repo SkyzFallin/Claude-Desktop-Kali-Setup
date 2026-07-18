@@ -3,24 +3,32 @@ set -euo pipefail
 
 # install-claude-desktop.sh — Build & install Claude Desktop + MCP servers on Kali/Debian/Ubuntu
 # Author: SkyzFallin (https://github.com/SkyzFallin)
-# Usage: sudo ./install-claude-desktop.sh
+# Usage: ./install-claude-desktop.sh   (as a normal user — NOT with sudo)
 #
 # Instead of trusting a third-party APT repo + key hosted on GitHub, this script
 # builds the Claude Desktop .deb from source (aaddrick/claude-desktop-debian)
 # and signs/verifies it with OUR OWN GPG signing key before installing.
 #
+# The upstream build.sh refuses to run as root, so this script runs as a normal
+# user and invokes sudo only for the steps that need it (may prompt for password).
+#
 # Sources:
 #   https://github.com/aaddrick/claude-desktop-debian
 #   https://www.kali.org/tools/mcp-kali-server/
 
-if [[ $EUID -ne 0 ]]; then
-    echo "This script must be run as root (use sudo)." >&2
+if [[ $EUID -eq 0 ]]; then
+    echo "Do not run this script as root or with sudo." >&2
+    echo "The upstream Claude Desktop build script refuses to run as root." >&2
+    echo "Run it as a normal user; sudo is used internally where needed." >&2
     exit 1
 fi
 
-REAL_USER="${SUDO_USER:-$USER}"
-REAL_HOME=$(eval echo "~$REAL_USER")
-CONFIG_DIR="$REAL_HOME/.config/Claude"
+if ! command -v sudo >/dev/null 2>&1; then
+    echo "sudo is required but not installed." >&2
+    exit 1
+fi
+
+CONFIG_DIR="$HOME/.config/Claude"
 CONFIG_FILE="$CONFIG_DIR/claude_desktop_config.json"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,20 +36,24 @@ BUILD_REPO="${CLAUDE_BUILD_REPO:-https://github.com/aaddrick/claude-desktop-debi
 BUILD_DIR="${CLAUDE_BUILD_DIR:-/opt/claude-desktop-build}"
 
 # Our signing key lives here (root-owned; it only signs locally-built packages).
-export CLAUDE_GNUPGHOME="${CLAUDE_GNUPGHOME:-/etc/claude-desktop/signing-gnupg}"
+CLAUDE_GNUPGHOME="${CLAUDE_GNUPGHOME:-/etc/claude-desktop/signing-gnupg}"
 PUBKEY_OUT="$SCRIPT_DIR/claude-desktop-signing.pub.asc"
 
 echo "[*] Installing build prerequisites..."
-apt update -qq
-apt install -y git gpg curl ca-certificates
+sudo apt update -qq
+sudo apt install -y git gpg curl ca-certificates
 
 echo "[*] Generating our own package-signing key (if needed)..."
-CLAUDE_GNUPGHOME="$CLAUDE_GNUPGHOME" CLAUDE_PUBKEY_OUT="$PUBKEY_OUT" \
+sudo env CLAUDE_GNUPGHOME="$CLAUDE_GNUPGHOME" CLAUDE_PUBKEY_OUT="$PUBKEY_OUT" \
     bash "$SCRIPT_DIR/scripts/generate-signing-key.sh"
 # Let the invoking user own the exported public key so it can be committed/shared.
-chown "$REAL_USER:$REAL_USER" "$PUBKEY_OUT" 2>/dev/null || true
+sudo chown "$USER": "$PUBKEY_OUT"
 
 echo "[*] Fetching Claude Desktop build scripts..."
+# The build dir must be writable by us; also fix ownership left over from any
+# earlier run of this installer under sudo.
+sudo mkdir -p "$BUILD_DIR"
+sudo chown -R "$USER": "$BUILD_DIR"
 if [[ -d "$BUILD_DIR/.git" ]]; then
     git -C "$BUILD_DIR" pull --ff-only
 else
@@ -59,19 +71,19 @@ fi
 echo "[*] Built package: $DEB_FILE"
 
 echo "[*] Signing the package with our key..."
-GNUPGHOME="$CLAUDE_GNUPGHOME" \
+sudo env GNUPGHOME="$CLAUDE_GNUPGHOME" \
     gpg --batch --yes --armor --detach-sign --output "${DEB_FILE}.asc" "$DEB_FILE"
 
 echo "[*] Verifying the package signature with our key..."
-GNUPGHOME="$CLAUDE_GNUPGHOME" \
+sudo env GNUPGHOME="$CLAUDE_GNUPGHOME" \
     gpg --batch --verify "${DEB_FILE}.asc" "$DEB_FILE"
 echo "[+] Signature verified — package is authentic."
 
 echo "[*] Installing claude-desktop..."
-apt install -y "$DEB_FILE"
+sudo apt install -y "$DEB_FILE"
 
 echo "[*] Installing mcp-kali-server..."
-apt install -y mcp-kali-server \
+sudo apt install -y mcp-kali-server \
     || echo "[!] mcp-kali-server not available via APT (needs Kali repos); skipping."
 
 echo "[*] Configuring MCP servers..."
@@ -81,7 +93,7 @@ cat > "$CONFIG_FILE" << EOF
   "mcpServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "$REAL_HOME"]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME"]
     },
     "kali-mcp-server": {
       "command": "python3",
@@ -96,7 +108,6 @@ cat > "$CONFIG_FILE" << EOF
   }
 }
 EOF
-chown -R "$REAL_USER:$REAL_USER" "$CONFIG_DIR"
 
 echo "[+] Installation complete."
 echo "    Package signed & verified with our key ($CLAUDE_GNUPGHOME)."
