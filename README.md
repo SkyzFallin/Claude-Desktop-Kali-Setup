@@ -56,10 +56,20 @@ steps that need it, so you may be prompted for your password.
 
 ## After Installation
 
+The installer adds a **Claude Desktop (Kali MCP)** shortcut to your Desktop and
+app menu. Launching it starts the Kali API server (only if it isn't already
+running) and then opens Claude Desktop — so a single click brings up the whole
+stack.
+
+To do it manually instead:
+
 1. Start the Kali API server: `kali-server-mcp`
 2. Launch Claude Desktop: `claude-desktop-unofficial`
    (upstream names the binary `claude-desktop-unofficial` so it can coexist
    with Anthropic's official `claude-desktop` package)
+
+The launcher script lives at `~/.local/bin/claude-kali-launch`; the API server's
+output is logged to `/tmp/kali-server-mcp.log`.
 
 ## Sources
 

@@ -111,8 +111,45 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
+echo "[*] Installing launcher + desktop shortcut..."
+# Launcher script (starts the Kali API server if needed, then Claude Desktop).
+LAUNCHER_DIR="$HOME/.local/bin"
+LAUNCHER="$LAUNCHER_DIR/claude-kali-launch"
+mkdir -p "$LAUNCHER_DIR"
+cp "$SCRIPT_DIR/scripts/claude-kali-launch.sh" "$LAUNCHER"
+chmod +x "$LAUNCHER"
+
+# Desktop entry pointing at the launcher (Exec must be an absolute path).
+DESKTOP_ENTRY="[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Claude Desktop (Kali MCP)
+Comment=Start the Kali MCP API server, then launch Claude Desktop
+Exec=$LAUNCHER
+Icon=claude-desktop-unofficial
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=true"
+
+# App-menu copy.
+APP_DIR="$HOME/.local/share/applications"
+mkdir -p "$APP_DIR"
+printf '%s\n' "$DESKTOP_ENTRY" > "$APP_DIR/claude-desktop-kali.desktop"
+command -v update-desktop-database >/dev/null 2>&1 \
+    && update-desktop-database "$APP_DIR" 2>/dev/null || true
+
+# Desktop copy (must be executable; some desktops also need it marked trusted).
+DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
+mkdir -p "$DESKTOP_DIR"
+DESKTOP_SHORTCUT="$DESKTOP_DIR/claude-desktop-kali.desktop"
+printf '%s\n' "$DESKTOP_ENTRY" > "$DESKTOP_SHORTCUT"
+chmod +x "$DESKTOP_SHORTCUT"
+# GNOME/Nautilus: mark the launcher trusted so it runs on double-click.
+command -v gio >/dev/null 2>&1 \
+    && gio set "$DESKTOP_SHORTCUT" metadata::trusted true 2>/dev/null || true
+
 echo "[+] Installation complete."
 echo "    Package signed & verified with our key ($CLAUDE_GNUPGHOME)."
-echo "    To use:"
-echo "      1. Start the Kali API server:  kali-server-mcp"
-echo "      2. Launch Claude Desktop:      claude-desktop-unofficial"
+echo "    A 'Claude Desktop (Kali MCP)' shortcut is on your Desktop and in the app menu."
+echo "    It starts the Kali API server (if needed), then launches Claude Desktop."
+echo "    To launch manually:  $LAUNCHER"
