@@ -92,6 +92,14 @@ echo "[*] Installing mcp-kali-server..."
 sudo apt install -y mcp-kali-server \
     || echo "[!] mcp-kali-server not available via APT (needs Kali repos); skipping."
 
+# The Kali MCP server's health check execs the `which` binary (shell=False) to
+# detect tools. Recent Kali/Debian dropped standalone /usr/bin/which from
+# debianutils (it's now only a shell builtin), so without GNU `which` the server
+# falsely reports every tool as missing. Restore the binary it expects.
+echo "[*] Ensuring the 'which' binary is present (needed by the MCP server health check)..."
+sudo apt install -y which \
+    || echo "[!] Could not install 'which'; the MCP server may falsely report tools as missing."
+
 # The Kali MCP server drives these CLI tools; a lean Kali install (kali-linux-core)
 # ships without them, which makes the server warn "Missing tools" at startup.
 echo "[*] Installing essential Kali tools used by the MCP server..."
