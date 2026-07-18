@@ -98,6 +98,24 @@ echo "[*] Installing essential Kali tools used by the MCP server..."
 sudo apt install -y nmap nikto gobuster dirb \
     || echo "[!] Some Kali tools could not be installed (need Kali repos); the MCP server will warn about missing tools."
 
+# Resolve the Kali MCP bridge binary the package installs on PATH, rather than
+# guessing a script path. If it's missing, we omit the kali block and warn
+# instead of writing an entry that would fail to spawn.
+MCP_BRIDGE_BIN="$(command -v mcp-server || true)"
+if [[ -n "$MCP_BRIDGE_BIN" ]]; then
+    KALI_BLOCK=",
+    \"kali-mcp-server\": {
+      \"command\": \"$MCP_BRIDGE_BIN\",
+      \"args\": [\"--server\", \"http://127.0.0.1:5000\"],
+      \"description\": \"Kali MCP Server\",
+      \"timeout\": 300
+    }"
+else
+    KALI_BLOCK=""
+    echo "[!] 'mcp-server' bridge not found on PATH — omitting the kali-mcp-server entry."
+    echo "    Install mcp-kali-server from the Kali repos and rerun, or add the block manually."
+fi
+
 echo "[*] Configuring MCP servers..."
 mkdir -p "$CONFIG_DIR"
 cat > "$CONFIG_FILE" << EOF
@@ -106,13 +124,7 @@ cat > "$CONFIG_FILE" << EOF
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME"]
-    },
-    "kali-mcp-server": {
-      "command": "mcp-server",
-      "args": ["--server", "http://127.0.0.1:5000"],
-      "description": "Kali MCP Server",
-      "timeout": 300
-    }
+    }$KALI_BLOCK
   }
 }
 EOF
