@@ -92,6 +92,44 @@ echo "[*] Installing mcp-kali-server..."
 sudo apt install -y mcp-kali-server \
     || echo "[!] mcp-kali-server not available via APT (needs Kali repos); skipping."
 
+# Work around an upstream bug in mcp-kali-server: CommandExecutor.execute() was
+# changed to reject list commands (and left a dead `cmd_args = shlex.split(...)`
+# line), but health_check and every tool endpoint still pass lists. The result is
+# "CommandExecutor expects a string, but got list" for tool detection AND every
+# scan. Removing the guard restores the original behavior (lists run shell=False,
+# strings run shell=True). Idempotent; makes a .bak and validates syntax first.
+SERVER_PY="/usr/share/mcp-kali-server/server.py"
+if [[ -f "$SERVER_PY" ]]; then
+    echo "[*] Patching mcp-kali-server CommandExecutor (upstream list-command bug)..."
+    sudo python3 - "$SERVER_PY" <<'PY'
+import sys, ast, shutil
+p = sys.argv[1]
+lines = open(p).read().split("\n")
+out, removed, i = [], 0, 0
+while i < len(lines):
+    s = lines[i].strip()
+    if s == "if not isinstance(self.command, str):":
+        i += 1; removed += 1
+        if i < len(lines) and lines[i].strip().startswith("raise ValueError"):
+            i += 1; removed += 1
+        if i < len(lines) and lines[i].strip() == "":
+            i += 1
+        continue
+    if s == "cmd_args = shlex.split(self.command)":
+        i += 1; removed += 1
+        continue
+    out.append(lines[i]); i += 1
+if removed == 0:
+    print("[*] mcp-kali-server already patched or pattern absent; no change.")
+    sys.exit(0)
+new = "\n".join(out)
+ast.parse(new)  # validate before writing
+shutil.copy(p, p + ".bak")
+open(p, "w").write(new)
+print(f"[+] Patched {p} (removed {removed} lines); backup at {p}.bak")
+PY
+fi
+
 # The Kali MCP server's health check execs the `which` binary (shell=False) to
 # detect tools. Newer debianutils (as tracked by rolling Kali) drops standalone
 # /usr/bin/which — it survives only as a shell builtin, which subprocess can't
