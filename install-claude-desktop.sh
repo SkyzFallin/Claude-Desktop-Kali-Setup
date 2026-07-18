@@ -149,33 +149,55 @@ echo "[*] Installing essential Kali tools used by the MCP server..."
 sudo apt install -y nmap nikto gobuster dirb \
     || echo "[!] Some Kali tools could not be installed (need Kali repos); the MCP server will warn about missing tools."
 
-# Resolve the Kali MCP bridge binary the package installs on PATH, rather than
-# guessing a script path. If it's missing, we omit the kali block and warn
-# instead of writing an entry that would fail to spawn.
+# The filesystem MCP server runs via npx, which a fresh Kali box lacks (no Node
+# by default). Install Node.js/npm, then resolve npx. We only write a server
+# block when its command actually resolves, so the config never contains an
+# entry that can't spawn.
+if ! command -v npx >/dev/null 2>&1; then
+    echo "[*] Installing Node.js/npm (needed by the filesystem MCP server)..."
+    sudo apt install -y nodejs npm 2>/dev/null || true
+fi
+NPX_BIN="$(command -v npx || true)"
 MCP_BRIDGE_BIN="$(command -v mcp-server || true)"
+
+MCP_BLOCKS=()
+if [[ -n "$NPX_BIN" ]]; then
+    MCP_BLOCKS+=("    \"filesystem\": {
+      \"command\": \"$NPX_BIN\",
+      \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\", \"$HOME\"]
+    }")
+else
+    echo "[!] 'npx' not found — omitting the filesystem MCP server entry."
+    echo "    Install nodejs/npm and rerun, or add the block manually."
+fi
 if [[ -n "$MCP_BRIDGE_BIN" ]]; then
-    KALI_BLOCK=",
-    \"kali-mcp-server\": {
+    MCP_BLOCKS+=("    \"kali-mcp-server\": {
       \"command\": \"$MCP_BRIDGE_BIN\",
       \"args\": [\"--server\", \"http://127.0.0.1:5000\"],
       \"description\": \"Kali MCP Server\",
       \"timeout\": 300
-    }"
+    }")
 else
-    KALI_BLOCK=""
     echo "[!] 'mcp-server' bridge not found on PATH — omitting the kali-mcp-server entry."
     echo "    Install mcp-kali-server from the Kali repos and rerun, or add the block manually."
 fi
+
+# Join the resolved blocks with commas (handles 0, 1, or 2 blocks — valid JSON).
+MCP_JSON=""
+for idx in "${!MCP_BLOCKS[@]}"; do
+    if [[ $idx -gt 0 ]]; then
+        MCP_JSON+=",
+"
+    fi
+    MCP_JSON+="${MCP_BLOCKS[$idx]}"
+done
 
 echo "[*] Configuring MCP servers..."
 mkdir -p "$CONFIG_DIR"
 cat > "$CONFIG_FILE" << EOF
 {
   "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "$HOME"]
-    }$KALI_BLOCK
+$MCP_JSON
   }
 }
 EOF

@@ -71,6 +71,32 @@ To do it manually instead:
 The launcher script lives at `~/.local/bin/claude-kali-launch`; the API server's
 output is logged to `/tmp/kali-server-mcp.log`.
 
+### Using the MCP tools
+
+The `kali-mcp-server` and `filesystem` tools appear in a **regular local chat**
+inside the desktop app — look for the tools/connector control near the message
+box. Try: *"Use the Kali MCP tools to run `nmap -sn 127.0.0.1`."*
+
+Do **not** test this from a Cowork **cloud** task. Cloud tasks run in Anthropic's
+sandbox and cannot reach an MCP server running on your machine — a cloud session
+will report the tools as unavailable even when everything is configured
+correctly. Use a local chat (or a task set to run on your computer) instead.
+
+### Verifying the Kali server directly
+
+If a scan doesn't work, check the API server itself rather than trusting the
+model's self-description of its tools:
+
+```bash
+curl -s http://127.0.0.1:5000/health | python3 -m json.tool
+curl -s -X POST http://127.0.0.1:5000/api/tools/nmap \
+  -H 'Content-Type: application/json' \
+  -d '{"target":"127.0.0.1","scan_type":"-sn","additional_args":""}' | python3 -m json.tool
+```
+
+`all_essential_tools_available: true` and a scan with `return_code: 0` mean the
+server is healthy end to end.
+
 ## Sources
 
 - [claude-desktop-debian](https://github.com/aaddrick/claude-desktop-debian) — Debian packaging for Claude Desktop
