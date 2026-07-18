@@ -57,7 +57,9 @@ steps that need it, so you may be prompted for your password.
 ## After Installation
 
 1. Start the Kali API server: `kali-server-mcp`
-2. Launch Claude Desktop: `claude-desktop`
+2. Launch Claude Desktop: `claude-desktop-unofficial`
+   (upstream names the binary `claude-desktop-unofficial` so it can coexist
+   with Anthropic's official `claude-desktop` package)
 
 ## Sources
 
