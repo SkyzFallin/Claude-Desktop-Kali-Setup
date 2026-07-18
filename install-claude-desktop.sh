@@ -61,26 +61,32 @@ else
 fi
 
 echo "[*] Building the Claude Desktop .deb from source..."
+# Clear artifacts from previous builds so we only sign/install what this build produces.
+rm -f "$BUILD_DIR"/claude-desktop*.deb "$BUILD_DIR"/claude-desktop*.deb.asc
 ( cd "$BUILD_DIR" && ./build.sh --build deb )
 
-DEB_FILE=$(ls -t "$BUILD_DIR"/claude-desktop_*.deb 2>/dev/null | head -n1 || true)
-if [[ -z "$DEB_FILE" ]]; then
+# Upstream renamed the package to claude-desktop-unofficial and may also emit a
+# transitional claude-desktop deb that depends on it — collect and install all.
+mapfile -t DEB_FILES < <(ls -t "$BUILD_DIR"/claude-desktop*_*.deb 2>/dev/null || true)
+if [[ ${#DEB_FILES[@]} -eq 0 ]]; then
     echo "Build did not produce a .deb file in $BUILD_DIR." >&2
     exit 1
 fi
-echo "[*] Built package: $DEB_FILE"
+echo "[*] Built package(s): ${DEB_FILES[*]}"
 
-echo "[*] Signing the package with our key..."
-sudo env GNUPGHOME="$CLAUDE_GNUPGHOME" \
-    gpg --batch --yes --armor --detach-sign --output "${DEB_FILE}.asc" "$DEB_FILE"
+for DEB_FILE in "${DEB_FILES[@]}"; do
+    echo "[*] Signing ${DEB_FILE##*/} with our key..."
+    sudo env GNUPGHOME="$CLAUDE_GNUPGHOME" \
+        gpg --batch --yes --armor --detach-sign --output "${DEB_FILE}.asc" "$DEB_FILE"
 
-echo "[*] Verifying the package signature with our key..."
-sudo env GNUPGHOME="$CLAUDE_GNUPGHOME" \
-    gpg --batch --verify "${DEB_FILE}.asc" "$DEB_FILE"
-echo "[+] Signature verified — package is authentic."
+    echo "[*] Verifying the package signature with our key..."
+    sudo env GNUPGHOME="$CLAUDE_GNUPGHOME" \
+        gpg --batch --verify "${DEB_FILE}.asc" "$DEB_FILE"
+done
+echo "[+] Signature(s) verified — package(s) are authentic."
 
 echo "[*] Installing claude-desktop..."
-sudo apt install -y "$DEB_FILE"
+sudo apt install -y "${DEB_FILES[@]}"
 
 echo "[*] Installing mcp-kali-server..."
 sudo apt install -y mcp-kali-server \
