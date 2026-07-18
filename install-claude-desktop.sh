@@ -92,6 +92,12 @@ echo "[*] Installing mcp-kali-server..."
 sudo apt install -y mcp-kali-server \
     || echo "[!] mcp-kali-server not available via APT (needs Kali repos); skipping."
 
+# The Kali MCP server drives these CLI tools; a lean Kali install (kali-linux-core)
+# ships without them, which makes the server warn "Missing tools" at startup.
+echo "[*] Installing essential Kali tools used by the MCP server..."
+sudo apt install -y nmap nikto gobuster dirb \
+    || echo "[!] Some Kali tools could not be installed (need Kali repos); the MCP server will warn about missing tools."
+
 echo "[*] Configuring MCP servers..."
 mkdir -p "$CONFIG_DIR"
 cat > "$CONFIG_FILE" << EOF
